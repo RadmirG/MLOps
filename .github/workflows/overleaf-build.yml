@@ -34,7 +34,7 @@ jobs:
       - name: Build LaTeX
         uses: xu-cheng/latex-action@v3
         with:
-          root_file: main.tex
+          root_file: MLOps.tex
           working_directory: repo/overleaf_src
 
       # 4) Commit the PDF back to the repo (into docs/)
