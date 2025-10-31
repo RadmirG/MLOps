@@ -2,10 +2,10 @@ name: Pull Overleaf → Build PDF → Commit
 on:
   workflow_dispatch: {}
   schedule:
-    - cron: "0 */6 * * *"   # every 6 hours;
-  # trigger the job on pushes to main:
+    - cron: "0 */6 * * *"     # every 6 hours
   push:
     branches: [ main ]
+
 permissions:
   contents: write
 
@@ -14,28 +14,35 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      # 1) Sync Overleaf sources into ./overleaf-src
-      # Action: https://github.com/marketplace/actions/overleaf-sync-with-git
-      - name: Sync Overleaf Sources
-        uses: subhamX/Overleaf-Sync-with-Git@v1.0.0
         with:
-          # Put your Overleaf "read-only/share" URL in a repo secret
-          overleaf_project_url: ${{ secrets.OVERLEAF_MLOPS_URL }}
-          download_path: overleaf-src
+          path: repo
 
-      # 2) Build the PDF from the main .tex in that folder
+      # 1) Fetch latest sources from Overleaf into ./artifacts (per action docs)
+      - name: Fetch Overleaf sources
+        uses: subhamx/overleaf_sync_with_git@master
+        with:
+          OVERLEAF_PROJECT_ID: ${{ secrets.OVERLEAF_PROJECT_ID }}
+          OVERLEAF_COOKIE: ${{ secrets.OVERLEAF_COOKIE }}
+
+      # 2) Copy fetched sources into the repo working tree
+      - name: Prepare source tree
+        run: |
+          mkdir -p repo/overleaf_src
+          cp -r artifacts/* repo/overleaf_src
+
+      # 3) Build LaTeX (adjust root_file if your entry point isn't main.tex)
       - name: Build LaTeX
         uses: xu-cheng/latex-action@v3
         with:
-          root_file: main.tex               # <- change if needed
-          working_directory: overleaf-src   # compile inside synced folder
+          root_file: main.tex
+          working_directory: repo/overleaf_src
 
-      # 3) Commit the PDF back into the repo (e.g., docs/)
+      # 4) Commit the PDF back to the repo (into docs/)
       - name: Commit PDF
+        working-directory: repo
         run: |
           mkdir -p docs
-          cp overleaf-src/*.pdf docs/ || true
+          cp overleaf_src/*.pdf docs/ || true
           git config user.name  "github-actions"
           git config user.email "actions@github.com"
           git add docs/*.pdf || true
