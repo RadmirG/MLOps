@@ -1,0 +1,43 @@
+name: Pull Overleaf → Build PDF → Commit
+on:
+  workflow_dispatch: {}
+  schedule:
+    - cron: "0 */6 * * *"   # every 6 hours;
+  # trigger the job on pushes to main:
+  push:
+    branches: [ main ]
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # 1) Sync Overleaf sources into ./overleaf-src
+      # Action: https://github.com/marketplace/actions/overleaf-sync-with-git
+      - name: Sync Overleaf Sources
+        uses: subhamX/Overleaf-Sync-with-Git@v1.0.0
+        with:
+          # Put your Overleaf "read-only/share" URL in a repo secret
+          overleaf_project_url: ${{ secrets.OVERLEAF_MLOPS_URL }}
+          download_path: overleaf-src
+
+      # 2) Build the PDF from the main .tex in that folder
+      - name: Build LaTeX
+        uses: xu-cheng/latex-action@v3
+        with:
+          root_file: main.tex               # <- change if needed
+          working_directory: overleaf-src   # compile inside synced folder
+
+      # 3) Commit the PDF back into the repo (e.g., docs/)
+      - name: Commit PDF
+        run: |
+          mkdir -p docs
+          cp overleaf-src/*.pdf docs/ || true
+          git config user.name  "github-actions"
+          git config user.email "actions@github.com"
+          git add docs/*.pdf || true
+          git commit -m "CI: update PDF from Overleaf sources" || echo "No PDF changes"
+          git push
