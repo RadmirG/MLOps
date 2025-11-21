@@ -23,7 +23,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: RadmirG/MLOps_Learning_Guide
-          ref: master              # oder main, falls du später änderst
+          ref: master
           path: repo/latex_src 
           
       # 2) Build LaTeX
