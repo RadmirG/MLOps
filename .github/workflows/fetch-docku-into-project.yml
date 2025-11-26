@@ -1,13 +1,10 @@
 name: Pull Overleaf → Build PDF → Commit
-
 on:
   workflow_dispatch: {}
   schedule:
     - cron: "0 */6 * * *"     # every 6 hours
   push:
     branches: [ main ]
-    paths-ignore:
-      - 'docs/**'             # Ignore pushes that only change PDFs
 
 permissions:
   contents: write
