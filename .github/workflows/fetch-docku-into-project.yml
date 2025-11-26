@@ -1,10 +1,13 @@
 name: Pull Overleaf → Build PDF → Commit
+
 on:
   workflow_dispatch: {}
   schedule:
     - cron: "0 */6 * * *"     # every 6 hours
   push:
     branches: [ main ]
+    paths-ignore:
+      - 'docs/**'             # Ignore pushes that only change PDFs
 
 permissions:
   contents: write
@@ -12,35 +15,43 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
-      # 1) Checkout parent repo                          
+      # 1) Checkout parent repo with full history
       - uses: actions/checkout@v4
         with:
           path: repo
+          fetch-depth: 0
 
-      # 2) Copy fetched sources into the repo working tree
+      # 2) Checkout LaTeX project (MLOps_Learning_Guide)
       - name: Checkout LaTeX project (MLOps_Learning_Guide)
         uses: actions/checkout@v4
         with:
           repository: RadmirG/MLOps_Learning_Guide
           ref: master
-          path: repo/latex_src 
+          path: repo/latex_src
           
-      # 2) Build LaTeX
+      # 3) Build LaTeX
       - name: Build LaTeX
         uses: xu-cheng/latex-action@v3
         with:
           root_file: MLOps.tex
           working_directory: repo/latex_src
 
-      # 3) Commit the PDF back to the repo (into docs/)
+      # 4) Commit the PDF back to the repo (into docs/)
       - name: Commit PDF
         working-directory: repo
         run: |
           mkdir -p docs
           cp latex_src/*.pdf docs/ || true
+
           git config user.name  "github-actions"
           git config user.email "actions@github.com"
+
           git add docs/*.pdf || true
           git commit -m "CI: update PDF from MLOps_Learning_Guide sources" || echo "No PDF changes"
-          git push
+
+          # Rebase before push to avoid conflicts
+          git pull --rebase origin main || echo "Nothing to rebase"
+
+          git push origin HEAD:main
