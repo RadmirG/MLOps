@@ -62,5 +62,7 @@ The project primarily uses:
 Specific tools and dependencies are documented within the respective subdirectories.
 
 ---
+## Author
 
-#
+**Radmir Gesler**
+
